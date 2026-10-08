@@ -1,7 +1,7 @@
 
 
 import streamlit as st
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer
 
 # Configure the application
 st.set_page_config(
@@ -16,33 +16,34 @@ st.write(
     "using MarianMT and RoBERTa."
 )
 
-# Load the models once and reuse them
+
 @st.cache_resource
 def load_models():
+
+    # Model 1: German to English translation
     translator = pipeline(
-    "translation",
-    model="Helsinki-NLP/opus-mt-de-en",
-    device=-1
-)
+        "translation_de_to_en",
+        model="Helsinki-NLP/opus-mt-de-en",
+        device=-1
+    )
 
-   
-from transformers import AutoTokenizer
+    # Model 2: Roberto's RoBERTa sentiment model
+    model_name = "Roberto-Vargas/roberta-amazon-sentiment"
 
-model_name = "Roberto-Vargas/roberta-amazon-sentiment"
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_name,
+        use_fast=False
+    )
 
-tokenizer = AutoTokenizer.from_pretrained(
-    model_name,
-    use_fast=False
-)
+    classifier = pipeline(
+        "text-classification",
+        model=model_name,
+        tokenizer=tokenizer,
+        top_k=None,
+        device=-1
+    )
 
-classifier = pipeline(
-    "text-classification",
-    model=model_name,
-    tokenizer=tokenizer,
-    top_k=None,
-    device=-1
-)
-return translator, classifier
+    return translator, classifier
 
 
 # User interface
