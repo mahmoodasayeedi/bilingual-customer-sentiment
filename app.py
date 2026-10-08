@@ -25,12 +25,24 @@ def load_models():
     device=-1
 )
 
-    classifier = pipeline(
-        "text-classification",
-        model="Roberto-Vargas/roberta-amazon-sentiment",
-        top_k=None,
-        device=-1
-    )
+   
+from transformers import AutoTokenizer
+
+model_name = "Roberto-Vargas/roberta-amazon-sentiment"
+
+tokenizer = AutoTokenizer.from_pretrained(
+    model_name,
+    use_fast=False
+)
+
+classifier = pipeline(
+    "text-classification",
+    model=model_name,
+    tokenizer=tokenizer,
+    top_k=None,
+    device=-1
+)
+
 
     return translator, classifier
 
