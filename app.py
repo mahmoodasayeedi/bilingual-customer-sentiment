@@ -1,61 +1,133 @@
 
+
 import streamlit as st
 from transformers import pipeline, AutoTokenizer
 
-# -------------------------------------------------
-# 1. Streamlit page configuration
-# -------------------------------------------------
-
 st.set_page_config(
-    page_title="Bilingual Customer Sentiment",
+    page_title="Bilingual Customer Sentiment Analysis",
     page_icon="🌍",
-    layout="centered"
+    layout="wide"
 )
 
-st.title("🌍 Bilingual Customer Sentiment Analysis")
+# ---------- DESIGN ----------
 
-st.write(
-    "Analyze English and German customer reviews "
-    "using MarianMT translation and RoBERTa sentiment analysis."
-)
+st.markdown("""
+<style>
+.stApp {
+    background-color: #f5f6f9;
+    color: #0f172a;
+}
 
-# -------------------------------------------------
-# 2. Hugging Face model identifiers
-# -------------------------------------------------
+.block-container {
+    max-width: 1120px;
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+h1, h2, h3, p, label {
+    color: #0f172a;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] > div {
+    border-radius: 13px;
+}
+
+div.stButton > button[kind="primary"] {
+    background: #f97316;
+    border: 1px solid #f97316;
+    color: white;
+    font-weight: 700;
+    border-radius: 8px;
+}
+
+div.stButton > button[kind="primary"]:hover {
+    background: #ea580c;
+    border-color: #ea580c;
+    color: white;
+}
+
+div.stButton > button[kind="secondary"] {
+    background: #e5e7eb;
+    border: 1px solid #e5e7eb;
+    color: #0f172a;
+    font-weight: 700;
+    border-radius: 8px;
+}
+
+div.stButton > button[kind="secondary"]:hover {
+    background: #d1d5db;
+    color: #0f172a;
+}
+
+.result-label {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.result-value {
+    font-size: 35px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.mini-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    padding: 12px;
+    min-height: 95px;
+}
+
+.mini-title {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.mini-text {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.score-track {
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+    margin: 5px 0 14px;
+}
+
+.score-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+footer {
+    visibility: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------- MODELS ----------
 
 TRANSLATION_MODEL = "Helsinki-NLP/opus-mt-de-en"
+SENTIMENT_MODEL = "Roberto-Vargas/roberta-amazon-sentiment"
 
-SENTIMENT_MODEL = (
-    "Roberto-Vargas/roberta-amazon-sentiment"
-)
-
-# Roberto's model was fine-tuned from roberta-base.
-# Use the original tokenizer as a fallback.
-TOKENIZER_MODEL = "roberta-base"
-
-# -------------------------------------------------
-# 3. Load and cache models
-# -------------------------------------------------
-
-@st.cache_resource
+@st.cache_resource(show_spinner="Loading AI models...")
 def load_models():
-
-    # German -> English translation
     translator = pipeline(
-        task="translation_de_to_en",
+        "translation_de_to_en",
         model=TRANSLATION_MODEL,
         device=-1
     )
 
-    # Load original RoBERTa tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
-        TOKENIZER_MODEL,
+        "roberta-base",
         use_fast=False
     )
 
-    # Load Roberto's fine-tuned sentiment model
     classifier = pipeline(
-        task="text-classification",
+        "text-classification",
         model=SENTIMENT_MODEL,
         tokenizer=tokenizer,
         top_k=None,
@@ -65,162 +137,377 @@ def load_models():
     return translator, classifier
 
 
-# -------------------------------------------------
-# 4. User input
-# -------------------------------------------------
+# ---------- HELPERS ----------
 
-st.subheader("Enter a Customer Review")
+def score_bar(label, score, color):
+    percentage = score * 100
 
-language = st.selectbox(
-    "Select Review Language",
-    ["English", "German"]
+    st.markdown(
+        f"""
+        <div style="display:flex;
+                    justify-content:space-between;
+                    font-size:14px;
+                    font-weight:600;">
+            <span>{label}</span>
+            <span>{percentage:.2f}%</span>
+        </div>
+        <div class="score-track">
+            <div class="score-fill"
+                 style="width:{percentage:.2f}%;
+                        background:{color};">
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+EXAMPLES = {
+    "English": {
+        "Positive": (
+            "I love this product. It works perfectly "
+            "and is easy to use."
+        ),
+        "Neutral": (
+            "The product is okay. It does what I "
+            "expected, nothing special."
+        ),
+        "Negative": (
+            "This product is terrible. It stopped "
+            "working after two days."
+        ),
+    },
+    "German": {
+        "Positive": (
+            "Ich liebe dieses Produkt. Es funktioniert "
+            "perfekt und ist einfach zu bedienen."
+        ),
+        "Neutral": (
+            "Das Produkt ist okay. Es erfüllt meine "
+            "Erwartungen, aber nichts Besonderes."
+        ),
+        "Negative": (
+            "Dieses Produkt ist schrecklich. Es hat "
+            "nach zwei Tagen aufgehört zu funktionieren."
+        ),
+    }
+}
+
+# ---------- SESSION STATE ----------
+
+if "review" not in st.session_state:
+    st.session_state.review = EXAMPLES["English"]["Positive"]
+
+if "result" not in st.session_state:
+    st.session_state.result = None
+
+if "language" not in st.session_state:
+    st.session_state.language = "English"
+
+
+def clear_review():
+    st.session_state.review = ""
+    st.session_state.result = None
+
+
+def choose_example(sentiment):
+    language = st.session_state.language
+    st.session_state.review = EXAMPLES[language][sentiment]
+    st.session_state.result = None
+
+
+# ---------- HEADER ----------
+
+st.title("🌍 Bilingual Customer Sentiment Analysis")
+
+st.markdown(
+    "**MarianMT Translation + Fine-tuned RoBERTa "
+    "Sentiment Classification**"
 )
 
-review = st.text_area(
-    "Customer Review",
-    placeholder=(
-        "Example: Das Tablet ist sehr langsam "
-        "und ich bin nicht zufrieden."
-    ),
-    height=140
+st.write(
+    "Enter a customer review below to classify it as "
+    "**Positive**, **Neutral**, or **Negative** "
+    "and view the model's confidence scores."
 )
 
-# -------------------------------------------------
-# 5. Analyze sentiment
-# -------------------------------------------------
-
-if st.button(
-    "🔍 Analyze Sentiment",
-    type="primary",
-    use_container_width=True
-):
-
-    if not review.strip():
-        st.warning("Please enter a customer review.")
-
-    else:
-
-        try:
-
-            with st.spinner(
-                "Loading models and analyzing review..."
-            ):
-
-                translator, classifier = load_models()
-
-                english_review = review.strip()
-
-                # Translate German to English
-                if language == "German":
-
-                    translation_result = translator(
-                        english_review,
-                        max_length=256
-                    )
-
-                    english_review = (
-                        translation_result[0]["translation_text"]
-                    )
-
-                # Classify English review
-                predictions = classifier(
-                    english_review,
-                    truncation=True,
-                    max_length=128
-                )[0]
-
-            # ---------------------------------
-            # 6. Show translation
-            # ---------------------------------
-
-            if language == "German":
-
-                st.subheader("🇬🇧 English Translation")
-
-                st.info(english_review)
-
-            # ---------------------------------
-            # 7. Show sentiment result
-            # ---------------------------------
-
-            best_prediction = max(
-                predictions,
-                key=lambda item: item["score"]
-            )
-
-            sentiment = best_prediction["label"].capitalize()
-            confidence = best_prediction["score"]
-
-            st.subheader("Sentiment Prediction")
-
-            if sentiment.lower() == "positive":
-
-                st.success(
-                    f"😊 POSITIVE — {confidence:.1%} confidence"
-                )
-
-            elif sentiment.lower() == "negative":
-
-                st.error(
-                    f"😞 NEGATIVE — {confidence:.1%} confidence"
-                )
-
-            elif sentiment.lower() == "neutral":
-
-                st.warning(
-                    f"😐 NEUTRAL — {confidence:.1%} confidence"
-                )
-
-            else:
-
-                st.info(
-                    f"{sentiment} — {confidence:.1%} confidence"
-                )
-
-            # ---------------------------------
-            # 8. Show all sentiment scores
-            # ---------------------------------
-
-            st.subheader("Sentiment Confidence Scores")
-
-            for result in predictions:
-
-                label = result["label"].capitalize()
-                score = result["score"]
-
-                st.write(f"**{label}: {score:.1%}**")
-
-                st.progress(
-                    min(max(float(score), 0.0), 1.0)
-                )
-
-            st.caption(
-                "Sentiment model: Roberto-Vargas/"
-                "roberta-amazon-sentiment"
-            )
-
-        except Exception as error:
-
-            st.error(
-                "An error occurred while loading "
-                "the models or analyzing the review."
-            )
-
-            st.exception(error)
-
-
-# -------------------------------------------------
-# 9. Footer
-# -------------------------------------------------
-
-st.divider()
-
-st.caption(
-    "German-to-English translation: "
-    "Helsinki-NLP/opus-mt-de-en"
+st.markdown(
+    "🔹 **RoBERTa • Amazon Customer Reviews • English + German**"
 )
 
-st.caption(
-    "Sentiment classification: "
-    "Roberto-Vargas/roberta-amazon-sentiment"
+st.write("")
+
+# ---------- REVIEW CARD ----------
+
+with st.container(border=True):
+    st.markdown("**Customer Review**")
+
+    language = st.selectbox(
+        "Select Review Language",
+        ["English", "German"],
+        key="language"
+    )
+
+    st.text_area(
+        "Enter your review",
+        key="review",
+        height=155,
+        label_visibility="collapsed"
+    )
+
+    analyze_col, clear_col = st.columns([2, 1])
+
+    with analyze_col:
+        analyze = st.button(
+            "Analyze Sentiment",
+            type="primary",
+            use_container_width=True
+        )
+
+    with clear_col:
+        st.button(
+            "Clear",
+            type="secondary",
+            use_container_width=True,
+            on_click=clear_review
+        )
+
+    if analyze:
+        review_text = st.session_state.review.strip()
+
+        if not review_text:
+            st.warning("Please enter a customer review.")
+        else:
+            try:
+                with st.spinner("Analyzing your review..."):
+                    translator, classifier = load_models()
+
+                    english_text = review_text
+
+                    if language == "German":
+                        translated = translator(
+                            review_text,
+                            max_length=256
+                        )
+                        english_text = translated[0][
+                            "translation_text"
+                        ]
+
+                    predictions = classifier(
+                        english_text,
+                        truncation=True,
+                        max_length=128
+                    )[0]
+
+                    label_map = {
+                        "LABEL_0": "Negative",
+                        "LABEL_1": "Neutral",
+                        "LABEL_2": "Positive",
+                        "negative": "Negative",
+                        "neutral": "Neutral",
+                        "positive": "Positive",
+                    }
+
+                    scores = {}
+
+                    for item in predictions:
+                        raw = item["label"]
+                        label = label_map.get(
+                            raw,
+                            raw.capitalize()
+                        )
+                        scores[label] = float(item["score"])
+
+                    best_label = max(scores, key=scores.get)
+
+                    st.session_state.result = {
+                        "label": best_label,
+                        "confidence": scores[best_label],
+                        "scores": scores,
+                        "translation": (
+                            english_text
+                            if language == "German"
+                            else None
+                        ),
+                    }
+
+                st.success("Analysis complete.")
+
+            except Exception as error:
+                st.session_state.result = None
+                st.error("Analysis could not be completed.")
+                st.exception(error)
+
+# ---------- RESULTS ----------
+
+result = st.session_state.result
+
+if result is not None:
+
+    if result["translation"]:
+        with st.container(border=True):
+            st.markdown("**English Translation**")
+            st.info(result["translation"])
+
+    with st.container(border=True):
+        st.markdown("**Sentiment Prediction**")
+
+        label = result["label"]
+        confidence = result["confidence"]
+        scores = result["scores"]
+
+        colors = {
+            "Positive": "#00894d",
+            "Neutral": "#b7791f",
+            "Negative": "#dc2626"
+        }
+
+        left, right = st.columns([3, 1])
+
+        with left:
+            st.markdown(
+                '<div class="result-label">'
+                'Predicted Sentiment</div>',
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                f'<div class="result-value" '
+                f'style="color:{colors.get(label, "#0f172a")}">'
+                f'{label}</div>',
+                unsafe_allow_html=True
+            )
+
+        with right:
+            st.markdown(
+                '<div class="result-label">'
+                'Confidence</div>',
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                f'<div class="result-value">'
+                f'{confidence:.2%}</div>',
+                unsafe_allow_html=True
+            )
+
+        st.write("")
+
+        score_bar(
+            "Positive",
+            scores.get("Positive", 0),
+            "#22c55e"
+        )
+
+        score_bar(
+            "Neutral",
+            scores.get("Neutral", 0),
+            "#f59e0b"
+        )
+
+        score_bar(
+            "Negative",
+            scores.get("Negative", 0),
+            "#ef4444"
+        )
+
+# ---------- EXAMPLE REVIEWS ----------
+
+with st.container(border=True):
+    st.markdown("**Example Reviews**")
+
+    cols = st.columns(3)
+
+    for col, sentiment in zip(
+        cols,
+        ["Positive", "Neutral", "Negative"]
+    ):
+        with col:
+            st.markdown(
+                f"""
+                <div class="mini-card">
+                    <div class="mini-title">
+                        {sentiment.upper()} EXAMPLE
+                    </div>
+                    <div class="mini-text">
+                        {EXAMPLES[language][sentiment]}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.button(
+                f"Use {sentiment} Example",
+                key=f"example_{sentiment}",
+                use_container_width=True,
+                on_click=choose_example,
+                args=(sentiment,)
+            )
+
+# ---------- MODEL INFORMATION ----------
+
+with st.container(border=True):
+    st.markdown("**Model Information**")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            """
+            <div class="mini-card">
+                <div class="mini-title">SENTIMENT MODEL</div>
+                <div class="mini-text">
+                    <b>Fine-tuned RoBERTa</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        st.markdown(
+            """
+            <div class="mini-card">
+                <div class="mini-title">LANGUAGE SUPPORT</div>
+                <div class="mini-text">
+                    <b>English • German</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        st.markdown(
+            """
+            <div class="mini-card">
+                <div class="mini-title">PROJECT</div>
+                <div class="mini-text">
+                    <b>NLP Automated Customer Reviews</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.caption(
+        "German reviews are translated to English using "
+        "MarianMT before sentiment classification. "
+        "Confidence scores are model estimates, "
+        "not guarantees of correctness."
+    )
+
+# ---------- FOOTER ----------
+
+st.markdown(
+    """
+    <p style="text-align:center;
+              color:#94a3b8;
+              margin-top:25px;
+              font-size:13px;">
+        NLP Automated Customer Reviews • Sentiment Analysis
+    </p>
+    """,
+    unsafe_allow_html=True
 )
