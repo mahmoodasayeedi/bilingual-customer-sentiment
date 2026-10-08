@@ -42,7 +42,7 @@ classifier = pipeline(
     top_k=None,
     device=-1
 )
-
+return translator, classifier
 
 
 # User interface
