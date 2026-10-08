@@ -114,3 +114,14 @@ Credits and references
 - RoBERTa base model: FacebookAI/roberta-base
 - Libraries: Streamlit, Hugging Face Transformers, PyTorch
 This repository is the bilingual Streamlit demo. It builds on the team's sentiment analysis work and does not modify the original team repository or Roberto's hosted model.
+
+## 👥 Project Team
+
+This project was developed collaboratively as part of the **NLP Automated Customer Reviews** project.
+
+- **Mahmooda Sayeedir** — Bilingual Streamlit Application Development and Deployment
+- **Roberto Vargas** — Project Coordinator and Team Collaboration
+
+### Acknowledgments
+
+Special thanks to **Roberto Vargas** for developing and fine-tuning the RoBERTa sentiment classification model used in this application.
