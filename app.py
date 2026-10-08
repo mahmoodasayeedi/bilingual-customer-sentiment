@@ -30,10 +30,10 @@ def load_models():
     # Model 2: Roberto's RoBERTa sentiment model
     model_name = "Roberto-Vargas/roberta-amazon-sentiment"
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        use_fast=False
-    )
+ tokenizer = AutoTokenizer.from_pretrained(
+    "roberta-base",
+    use_fast=False
+)
 
     classifier = pipeline(
         "text-classification",
