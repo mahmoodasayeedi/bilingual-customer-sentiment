@@ -20,10 +20,10 @@ st.write(
 @st.cache_resource
 def load_models():
     translator = pipeline(
-        "translation",
-        model="Helsinki-NLP/opus-mt-de-en",
-        device=-1
-    )
+    "translation",
+    model="Helsinki-NLP/opus-mt-de-en",
+    device=-1
+)
 
     classifier = pipeline(
         "text-classification",
