@@ -74,24 +74,26 @@ Das Tablet ist sehr langsam und ich bin nicht zufrieden.
 This review expresses dissatisfaction and would ordinarily be expected to have negative sentiment; the actual prediction and scores depend on the running models.
 Run locally
 Requirements: Python 3.11, an internet connection for the first model download, and sufficient RAM to load both transformer models.
-# Clone the repository
-git clone https://github.com/mahmoodasayeedi/bilingual-customer-sentiment.git
-cd bilingual-customer-sentiment
 
-# Create and activate a virtual environment
-python -m venv .venv
+1) Clone the repository
+   git clone https://github.com/mahmoodasayeedi/bilingual-customer-sentiment.git
+   cd bilingual-customer-sentiment
 
-# macOS / Linux
-source .venv/bin/activate
+2) Create and activate a virtual environment
+   python -m venv .venv
 
-# Windows (PowerShell)
- .venv\Scripts\Activate.ps1
+3) macOS / Linux
+   source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+4) Windows (PowerShell)
+   .venv\Scripts\Activate.ps1
 
-# Start the app
-streamlit run app.py
+5) Install dependencies
+   pip install -r requirements.txt
+
+6) Start the app
+   streamlit run app.py
+   
 The browser will open the Streamlit interface. The first prediction may take longer because the Hugging Face models must be downloaded and initialized. No API key is required for the public model repositories used here.
 Project structure
 bilingual-customer-sentiment/
