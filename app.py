@@ -44,7 +44,7 @@ classifier = pipeline(
 )
 
 
-    return translator, classifier
+return translator, classifier
 
 
 # User interface
