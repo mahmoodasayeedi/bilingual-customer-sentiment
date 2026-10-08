@@ -44,8 +44,6 @@ classifier = pipeline(
 )
 
 
-return translator, classifier
-
 
 # User interface
 language = st.selectbox(
